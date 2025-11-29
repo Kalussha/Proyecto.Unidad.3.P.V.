@@ -1,0 +1,248 @@
+/* MEJORAS OPCIONALES - VALIDACIONES EN TIENDITA.ASPX */
+
+/* 
+   Puedes agregar estas validaciones en el archivo Tiendita.aspx
+   para mejorar la experiencia del usuario y la validación de datos.
+   Colócalas después de cada TextBox correspondiente.
+*/
+
+// ============================================
+// VALIDACIÓN PARA PLACA (txtCodigo)
+// ============================================
+<asp:RequiredFieldValidator ID="rfvPlaca" runat="server" 
+    ControlToValidate="txtCodigo"
+    ErrorMessage="La placa es obligatoria" 
+    CssClass="text-danger"
+    Display="Dynamic">
+</asp:RequiredFieldValidator>
+
+<asp:RegularExpressionValidator ID="revPlaca" runat="server"
+    ControlToValidate="txtCodigo"
+    ErrorMessage="Formato de placa inválido (Ej: ABC-1234)"
+    ValidationExpression="^[A-Z]{3}-\d{4}$"
+    CssClass="text-danger"
+    Display="Dynamic">
+</asp:RegularExpressionValidator>
+
+// ============================================
+// VALIDACIÓN PARA MARCA (txtNombre)
+// ============================================
+<asp:RequiredFieldValidator ID="rfvMarca" runat="server" 
+    ControlToValidate="txtNombre"
+    ErrorMessage="La marca es obligatoria" 
+    CssClass="text-danger"
+    Display="Dynamic">
+</asp:RequiredFieldValidator>
+
+// ============================================
+// VALIDACIÓN PARA MODELO (txtDesc)
+// ============================================
+<asp:RequiredFieldValidator ID="rfvModelo" runat="server" 
+    ControlToValidate="txtDesc"
+    ErrorMessage="El modelo es obligatorio" 
+    CssClass="text-danger"
+    Display="Dynamic">
+</asp:RequiredFieldValidator>
+
+// ============================================
+// VALIDACIÓN PARA AÑO (txtCantidad)
+// ============================================
+<asp:RequiredFieldValidator ID="rfvAnio" runat="server" 
+    ControlToValidate="txtCantidad"
+    ErrorMessage="El año es obligatorio" 
+    CssClass="text-danger"
+    Display="Dynamic">
+</asp:RequiredFieldValidator>
+
+<asp:RangeValidator ID="rvAnio" runat="server"
+    ControlToValidate="txtCantidad"
+    ErrorMessage="El año debe estar entre 1900 y 2030"
+    MinimumValue="1900"
+    MaximumValue="2030"
+    Type="Integer"
+    CssClass="text-danger"
+    Display="Dynamic">
+</asp:RangeValidator>
+
+// ============================================
+// VALIDACIÓN PARA TIPO (txtPrecio)
+// ============================================
+<asp:RequiredFieldValidator ID="rfvTipo" runat="server" 
+    ControlToValidate="txtPrecio"
+    ErrorMessage="El tipo es obligatorio" 
+    CssClass="text-danger"
+    Display="Dynamic">
+</asp:RequiredFieldValidator>
+
+// ============================================
+// ALTERNATIVA: USAR DropDownList PARA TIPO
+// ============================================
+/*
+   En lugar de un TextBox para el tipo, podrías usar un DropDownList
+   para asegurar valores consistentes:
+*/
+
+<asp:DropDownList ID="ddlTipo" runat="server" CssClass="form-control">
+    <asp:ListItem Value="">-- Seleccione un tipo --</asp:ListItem>
+    <asp:ListItem Value="Sedán">Sedán</asp:ListItem>
+    <asp:ListItem Value="SUV">SUV</asp:ListItem>
+    <asp:ListItem Value="Pickup">Pickup</asp:ListItem>
+    <asp:ListItem Value="Hatchback">Hatchback</asp:ListItem>
+    <asp:ListItem Value="Coupé">Coupé</asp:ListItem>
+    <asp:ListItem Value="Convertible">Convertible</asp:ListItem>
+    <asp:ListItem Value="Minivan">Minivan</asp:ListItem>
+    <asp:ListItem Value="Camioneta">Camioneta</asp:ListItem>
+</asp:DropDownList>
+
+<asp:RequiredFieldValidator ID="rfvTipoDropDown" runat="server" 
+    ControlToValidate="ddlTipo"
+    InitialValue=""
+    ErrorMessage="Debe seleccionar un tipo de vehículo" 
+    CssClass="text-danger"
+    Display="Dynamic">
+</asp:RequiredFieldValidator>
+
+// ============================================
+// VALIDATION SUMMARY (RESUMEN DE ERRORES)
+// ============================================
+/*
+   Agrega este control al final del formulario (antes del GridView)
+   para mostrar todos los errores de validación en un solo lugar:
+*/
+
+<asp:ValidationSummary ID="vsFormulario" runat="server" 
+    HeaderText="Por favor corrija los siguientes errores:"
+    CssClass="alert alert-danger"
+    DisplayMode="BulletList"
+    ShowSummary="true">
+</asp:ValidationSummary>
+
+// ============================================
+// MODIFICACIÓN EN LOS BOTONES
+// ============================================
+/*
+   Si usas DropDownList, actualiza el código en Tiendita.aspx.cs:
+   
+   En lugar de: txtPrecio.Text
+   Usa: ddlTipo.SelectedValue
+*/
+
+// Ejemplo en btnAgregar_Click:
+int ejecuta = concesionaria.agregarCoche(
+    txtCodigo.Text, 
+    txtNombre.Text, 
+    txtDesc.Text,
+    Convert.ToInt32(txtCantidad.Text),
+    ddlTipo.SelectedValue);  // <-- Cambio aquí
+
+// ============================================
+// MEJORA: MÉTODO PARA VALIDAR AÑO EN C#
+// ============================================
+/*
+   Agrega este método en Tiendita.aspx.cs para validación adicional del lado del servidor:
+*/
+
+private bool ValidarAnio(int anio)
+{
+    int anioActual = DateTime.Now.Year;
+    return anio >= 1900 && anio <= (anioActual + 1);
+}
+
+// Y úsalo en btnAgregar_Click y btnActualizar_Click:
+int anio = Convert.ToInt32(txtCantidad.Text);
+if (!ValidarAnio(anio))
+{
+    lblMensaje.Text = $"El año debe estar entre 1900 y {DateTime.Now.Year + 1}";
+    return;
+}
+
+// ============================================
+// MEJORA: VALIDAR PLACA ÚNICA (LADO SERVIDOR)
+// ============================================
+/*
+   Agrega este método en la clase Concesionaria (Producto.cs):
+*/
+
+public bool PlacaExiste(string placa)
+{
+    bool existe = false;
+    using (con = new Conexion())
+    {
+        con.abrirBD();
+        string sql = "SELECT COUNT(*) FROM coches WHERE placa = @placa";
+        MySqlCommand comando = new MySqlCommand(sql, con.ConexionBD);
+        comando.Parameters.AddWithValue("@placa", placa);
+        int count = Convert.ToInt32(comando.ExecuteScalar());
+        existe = count > 0;
+    }
+    return existe;
+}
+
+// Y úsalo en btnAgregar_Click:
+if (concesionaria.PlacaExiste(txtCodigo.Text))
+{
+    lblMensaje.Text = "Error: Ya existe un coche con esa placa";
+    return;
+}
+
+// ============================================
+// MEJORA: BÚSQUEDA/FILTRO DE COCHES
+// ============================================
+/*
+   Agrega un TextBox y Button para buscar coches:
+*/
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <asp:Label runat="server" Text="Buscar por Marca o Modelo:" CssClass="form-label"></asp:Label>
+        <div class="input-group">
+            <asp:TextBox ID="txtBuscar" runat="server" CssClass="form-control" 
+                placeholder="Ingrese marca o modelo..."></asp:TextBox>
+            <asp:Button ID="btnBuscar" runat="server" Text="Buscar" 
+                CssClass="btn btn-secondary" OnClick="btnBuscar_Click" />
+            <asp:Button ID="btnMostrarTodos" runat="server" Text="Mostrar Todos" 
+                CssClass="btn btn-outline-secondary" OnClick="btnMostrarTodos_Click" />
+        </div>
+    </div>
+</div>
+
+// Agrega estos métodos en Producto.cs:
+public DataTable BuscarCoches(string termino)
+{
+    DataTable coches = new DataTable();
+    using (con = new Conexion())
+    {
+        con.abrirBD();
+        string sql = @"SELECT id, placa, marca, modelo, anio, tipo, fecha_registro, fecha_actualizacion 
+                       FROM coches 
+                       WHERE marca LIKE @termino OR modelo LIKE @termino
+                       ORDER BY marca, modelo";
+        MySqlCommand comando = new MySqlCommand(sql, con.ConexionBD);
+        comando.Parameters.AddWithValue("@termino", "%" + termino + "%");
+        MySqlDataAdapter query = new MySqlDataAdapter(comando);
+        query.Fill(coches);
+    }
+    return coches;
+}
+
+// Y estos eventos en Tiendita.aspx.cs:
+protected void btnBuscar_Click(object sender, EventArgs e)
+{
+    if (!string.IsNullOrWhiteSpace(txtBuscar.Text))
+    {
+        concesionaria = new Modelo.Concesionaria();
+        gridProductos.DataSource = concesionaria.BuscarCoches(txtBuscar.Text);
+        gridProductos.DataBind();
+    }
+}
+
+protected void btnMostrarTodos_Click(object sender, EventArgs e)
+{
+    txtBuscar.Text = string.Empty;
+    concesionaria = new Modelo.Concesionaria();
+    concesionaria.gridCoches(gridProductos);
+}
+
+// ============================================
+// FIN DE MEJORAS OPCIONALES
+// ============================================
